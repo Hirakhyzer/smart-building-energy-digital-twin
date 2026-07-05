@@ -207,7 +207,7 @@ plot_forecast_results('outputs')
 
 ```text
 assets/                  Original conceptual SVG figures
-actions/                 GitHub Actions workflow
+.github/workflows/       GitHub Actions checks
 configs/                 Reproducible YAML settings
 data/                    Download instructions; raw data ignored
 docs/                    Methodology and report template
