@@ -1,0 +1,22 @@
+# Public repository: keep all downloaded/raw data local.
+data/raw/
+data/interim/
+data/processed/
+
+# Generated local research outputs
+outputs/figures/*
+outputs/results/*
+outputs/models/*
+!outputs/.gitkeep
+
+# Python, notebooks, environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.ipynb_checkpoints/
+
+# Operating system and editor files
+.DS_Store
+.vscode/
+.idea/
