@@ -1,0 +1,12 @@
+seed: 42
+paths:
+  raw_dir: data/raw/ashrae
+  output_dir: outputs
+scenario:
+  energy_column: meter_reading
+  temperature_column: air_temperature
+  efficiency_drop_fraction: 0.15
+  onset_fraction: 0.45
+  sensor_bias: 0.0
+risk:
+  smoothing_window: 24
