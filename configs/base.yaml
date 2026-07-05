@@ -1,0 +1,30 @@
+seed: 42
+paths:
+  raw_dir: data/raw/ashrae
+  output_dir: outputs
+
+data:
+  meter_type: 0
+  building_ids: null  # inspect first; use a small explicit subset for initial runs
+  validation_fraction: 0.15
+  test_fraction: 0.15
+
+forecast:
+  target_column: meter_reading
+  max_rows: 200000
+  baseline_model: hist_gradient_boosting
+
+thermal_model:
+  r_ao: 2.5
+  r_am: 1.0
+  c_air: 2.0
+  c_mass: 12.0
+  hvac_efficiency: 1.0
+  comfort_min: 20.0
+  comfort_max: 24.0
+  candidate_setpoints: [20.0, 21.0, 22.0, 23.0, 24.0]
+
+degradation_scenario:
+  efficiency_drop_fraction: 0.15
+  onset_fraction: 0.45
+  sensor_bias: 0.0
