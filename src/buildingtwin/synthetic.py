@@ -66,11 +66,12 @@ def generate_synthetic_ashrae_like_data(
 
     building_ids = np.arange(cfg.n_buildings, dtype=int)
     square_feet = rng.integers(18000, 85000, size=cfg.n_buildings)
+    primary_use_cycle = ["Education", "Office", "Lodging", "Public services"]
     metadata = pd.DataFrame(
         {
             "site_id": 0,
             "building_id": building_ids,
-            "primary_use": ["Education", "Office", "Lodging", "Public services"][: cfg.n_buildings],
+            "primary_use": [primary_use_cycle[index % len(primary_use_cycle)] for index in range(cfg.n_buildings)],
             "square_feet": square_feet,
             "year_built": rng.integers(1970, 2015, size=cfg.n_buildings),
             "floor_count": rng.integers(2, 9, size=cfg.n_buildings),
