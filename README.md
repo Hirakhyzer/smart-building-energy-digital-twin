@@ -1,6 +1,6 @@
 # Smart Building Energy Digital Twin
 
-<p align="center"><strong>Research infrastructure for energy forecasting, thermal simulation, transparent degradation scenarios, and comfort-aware decision analysis.</strong></p>
+<p align="center"><strong>Research infrastructure for energy forecasting, physics-informed thermal simulation, transparent degradation scenarios, and comfort-aware decision analysis.</strong></p>
 
 <p align="center">
   <a href="../../actions/workflows/python-checks.yml"><img src="../../actions/workflows/python-checks.yml/badge.svg" alt="Python checks"></a>
@@ -8,18 +8,18 @@
   <img src="https://img.shields.io/badge/data-local%20only-f59e0b.svg" alt="Local data only">
 </p>
 
-> **Research boundary:** this independent academic prototype keeps raw building data, processed data, trained models, and experiment outputs local. No forecast score, calibrated parameter, or equipment-failure claim is included until executable code generates it from downloaded data.
+> **Research boundary:** this independent academic prototype keeps raw building data, processed data, trained models, and experiment outputs local. No forecast score, calibrated parameter, or equipment-failure claim is included until executable code generates it from a declared input source.
 
 ## Research objective
 
-Can a hybrid digital twin combine historical energy data, weather, building metadata, a physics-informed thermal model, and transparent scenario analysis to support energy-aware decisions while preserving indoor-comfort constraints?
+Can a hybrid digital twin combine building energy data, weather, building metadata, a two-state RC thermal model, and transparent scenario analysis to support energy-aware decisions while preserving indoor-comfort constraints?
 
 | Research question | Evidence produced only after execution |
 | --- | --- |
-| How accurately can energy use be forecast? | Chronological test MAE, RMSE, sMAPE, residual figure |
-| Can a two-state RC model support interpretable what-if analysis? | Temperature trajectories and parameter record |
+| How accurately can energy use be forecast? | Chronological validation/test MAE, RMSE, sMAPE, residual figure |
+| Can a two-state RC model support interpretable what-if analysis? | Temperature scenario trajectories and parameter record |
 | What comfort-cost trade-offs exist across temperature targets? | Scenario table and trade-off figure |
-| How sensitive are signals to efficiency decline or sensor bias? | Explicitly simulated degradation-study outputs |
+| How sensitive are signals to efficiency decline or sensor bias? | Clearly labeled simulated degradation-study outputs |
 
 ## Architecture
 
@@ -36,7 +36,33 @@ The image is a conceptual workflow, not a performance chart or deployed system c
 | Decision layer | Compare candidate temperature targets | Cost proxy, energy proxy, comfort degree-hours |
 | Reproducibility | Record configuration and data boundary | YAML, tests, CI, local results |
 
-## Download this dataset
+## Run today — no download required
+
+A deterministic **synthetic demo mode** lets you run the complete digital-twin workflow now. It creates a synthetic multi-building campus with weather, occupancy proxies, energy readings, rare energy spikes, forecast residuals, anomaly scores, thermal scenarios, and injected efficiency decline.
+
+```bash
+python scripts/run_synthetic_demo.py
+```
+
+It produces local files such as:
+
+```text
+outputs/results/synthetic_demo_summary.json
+outputs/results/synthetic_demo_predictions.csv
+outputs/results/synthetic_demo_anomaly_scores.csv
+outputs/results/synthetic_demo_thermal_scenarios.csv
+outputs/results/synthetic_demo_degradation.csv
+
+outputs/figures/synthetic_energy_weather_profile.png
+outputs/figures/synthetic_forecast_window.png
+outputs/figures/synthetic_anomaly_scores.png
+outputs/figures/synthetic_comfort_cost_tradeoff.png
+outputs/figures/synthetic_degradation_profile.png
+```
+
+Every output is clearly labeled `synthetic`. It demonstrates executable workflow and reproducibility only; it is **not** empirical evidence about real buildings. Details: [`docs/synthetic_demo.md`](docs/synthetic_demo.md).
+
+## Download this dataset for the real-data study
 
 Download **ASHRAE Great Energy Predictor III** competition data from Kaggle. Extract only:
 
@@ -47,7 +73,7 @@ data/raw/ashrae/
 └── building_metadata.csv
 ```
 
-Do **not** upload these files to GitHub. `.gitignore` excludes them. See [`data/README.md`](data/README.md) for the local-data policy and a clear degradation-study boundary.
+Do **not** upload these files to GitHub. `.gitignore` excludes them. See [`data/README.md`](data/README.md) for the local-data policy and the degradation-study boundary.
 
 ## Physics-informed thermal loop
 
@@ -69,7 +95,7 @@ It supports research scenarios, not real equipment actuation. Python and MATLAB 
 
 ```mermaid
 flowchart LR
-  A[Local ASHRAE files] --> B[Schema and quality inspection]
+  A[Input source: synthetic or local ASHRAE files] --> B[Schema and quality inspection]
   B --> C[Weather metadata meter alignment]
   C --> D[Chronological train validation test split]
   D --> E[Energy forecast baseline]
@@ -82,9 +108,9 @@ flowchart LR
 ```
 
 - Chronological partitions prevent future-data leakage.
-- Building IDs must be explicitly selected in configuration; the code refuses arbitrary sampling.
-- Forecasting starts with causal calendar, weather, and available static metadata features.
-- The degradation study is labeled simulated because meter data do not provide component-level fault labels.
+- Real-data runs require an explicit building subset in configuration; the code refuses arbitrary selection.
+- Forecasting begins with causal calendar, weather, and available static metadata features.
+- The degradation module is labeled simulated because the default meter data do not provide component-level fault labels.
 - The scenario engine recommends what-if outcomes only; it does not control equipment.
 
 ## Installation
@@ -112,7 +138,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## Run the research workflow
+## Real-data workflow
 
 ### 1. Inspect the downloaded data
 
@@ -120,16 +146,16 @@ python -m pip install -r requirements.txt
 python scripts/inspect_data.py
 ```
 
-This creates `outputs/results/data_summary.json` with schema, type, missingness, duplicates, meter counts, building/site counts, and time coverage.
+This creates `outputs/results/data_summary.json` with schema, types, missingness, duplicate rows, meter counts, building/site counts, and time coverage.
 
-### 2. Choose a small explicit building subset
+### 2. Select an explicit building subset
 
-After reading the summary, edit `configs/base.yaml`:
+After reading the inspection summary, edit `configs/base.yaml`:
 
 ```yaml
 data:
   meter_type: 0              # confirm from inspection
-  building_ids: [0, 1, 2]    # replace with real inspected IDs
+  building_ids: [0, 1, 2]    # replace with inspected IDs
 ```
 
 ### 3. Run chronological energy forecasting
@@ -164,7 +190,7 @@ outputs/figures/comfort_cost_tradeoff.png
 python scripts/run_degradation_scenario.py --config configs/base.yaml
 ```
 
-This generates a labelled synthetic efficiency-decline study; it is not measured HVAC deterioration.
+This generates a labeled synthetic efficiency-decline study; it is not measured HVAC deterioration.
 
 ## Forecasting protocol
 
@@ -174,13 +200,13 @@ This generates a labelled synthetic efficiency-decline study; it is not measured
 | Weather | temperature, dew point, cloud, pressure, wind | Captures environmental energy drivers |
 | Static metadata | floor area, year built, floor count, site, meter | Captures available building heterogeneity |
 
-The first model is `HistGradientBoostingRegressor`. Metrics are MAE, RMSE, and sMAPE. Target lags are intentionally deferred until data cadence and missing-data behavior are inspected.
+The first model is `HistGradientBoostingRegressor`. Metrics are MAE, RMSE, and sMAPE. Target lags are intentionally deferred until real-data cadence and missing-data behavior are inspected.
 
 ## Degradation and anomaly boundary
 
 ```mermaid
 flowchart TD
-  A[Historical energy and weather] --> B[Forecast residual]
+  A[Historical or synthetic energy and weather] --> B[Forecast residual]
   B --> C[Residual feature window]
   C --> D[Unsupervised anomaly score]
   A --> E[Model-injected efficiency decline]
@@ -210,24 +236,25 @@ assets/                  Original conceptual SVG figures
 .github/workflows/       GitHub Actions checks
 configs/                 Reproducible YAML settings
 data/                    Download instructions; raw data ignored
-docs/                    Methodology and report template
+docs/                    Methodology, demo boundary, and report template
 matlab/                  Thermal-model and figure scripts
 outputs/                 Local-only results, figures, and models
-scripts/                 Inspection and experiment commands
+scripts/                 Inspection, real-data, and synthetic-demo commands
 src/buildingtwin/        Data, forecasting, RC model, scenarios, degradation, anomalies
-tests/                   Data-free unit tests
+tests/                   Data-free unit tests and synthetic generator tests
 ```
 
 ## Documentation
 
 - [`docs/methodology.md`](docs/methodology.md): detailed data, forecasting, RC-model, and limitation protocol.
+- [`docs/synthetic_demo.md`](docs/synthetic_demo.md): immediate runnable demo and interpretation rules.
 - [`docs/report_template.md`](docs/report_template.md): report skeleton for locally generated evidence only.
 - [`assets/README.md`](assets/README.md): why conceptual SVGs are not result figures.
 - [`data/README.md`](data/README.md): local download and data-handling guide.
 
 ## Limitations
 
-1. Data quality and weather alignment determine the credibility of any forecast result.
+1. Data quality and weather alignment determine the credibility of any real-data forecast result.
 2. The RC model is a simplified single-zone approximation and needs per-subset calibration.
 3. Price and occupancy are scenarios unless validated external sources are integrated.
 4. Degradation studies are simulated unless ground-truth equipment labels are added later.
