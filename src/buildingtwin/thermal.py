@@ -3,8 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 
 import numpy as np
+
+
+def _finite_number(value: float, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value, (int, float, np.integer, np.floating)
+    ):
+        raise ValueError(f"{name} must be a finite real number.")
+    result = float(value)
+    if not isfinite(result):
+        raise ValueError(f"{name} must be a finite real number.")
+    return result
 
 
 @dataclass(frozen=True)
@@ -22,8 +34,9 @@ class RCParameters:
     hvac_efficiency: float = 1.0
 
     def __post_init__(self) -> None:
-        if min(self.r_ao, self.r_am, self.c_air, self.c_mass, self.hvac_efficiency) <= 0:
-            raise ValueError("RC resistances, capacitances, and efficiency must be positive.")
+        for name in ("r_ao", "r_am", "c_air", "c_mass", "hvac_efficiency"):
+            if _finite_number(getattr(self, name), name) <= 0:
+                raise ValueError(f"{name} must be positive.")
 
 
 def rc_step(
@@ -42,14 +55,25 @@ def rc_step(
     The simulator is intended for scenario analysis, parameter calibration, and
     controller comparison—not direct equipment actuation.
     """
-    if dt_hours <= 0:
+    if _finite_number(dt_hours, "dt_hours") <= 0:
         raise ValueError("dt_hours must be positive.")
+    for name, value in (
+        ("air_temperature", air_temperature),
+        ("mass_temperature", mass_temperature),
+        ("outdoor_temperature", outdoor_temperature),
+        ("hvac_power", hvac_power),
+        ("internal_gain", internal_gain),
+        ("solar_gain", solar_gain),
+    ):
+        _finite_number(value, name)
     p = parameters
     air_flow = (outdoor_temperature - air_temperature) / p.r_ao
     mass_flow = (mass_temperature - air_temperature) / p.r_am
     hvac_gain = p.hvac_efficiency * hvac_power
     next_air = air_temperature + dt_hours * (air_flow + mass_flow + hvac_gain + internal_gain + solar_gain) / p.c_air
     next_mass = mass_temperature + dt_hours * (air_temperature - mass_temperature) / (p.r_am * p.c_mass)
+    if not isfinite(next_air) or not isfinite(next_mass):
+        raise ValueError("RC step generated non-finite temperatures.")
     return float(next_air), float(next_mass)
 
 
@@ -66,10 +90,17 @@ def simulate_rc_model(
     """Simulate indoor air and mass temperature trajectories over a scenario horizon."""
     outdoor = np.asarray(outdoor_temperature, dtype=float)
     hvac = np.asarray(hvac_power, dtype=float)
-    if outdoor.shape != hvac.shape:
-        raise ValueError("outdoor_temperature and hvac_power must share shape.")
-    internal = np.broadcast_to(np.asarray(internal_gain, dtype=float), outdoor.shape)
-    solar = np.broadcast_to(np.asarray(solar_gain, dtype=float), outdoor.shape)
+    if outdoor.ndim != 1 or outdoor.size == 0 or outdoor.shape != hvac.shape:
+        raise ValueError("outdoor_temperature and hvac_power must share a nonempty 1D shape.")
+    try:
+        internal = np.broadcast_to(np.asarray(internal_gain, dtype=float), outdoor.shape)
+        solar = np.broadcast_to(np.asarray(solar_gain, dtype=float), outdoor.shape)
+    except ValueError as exc:
+        raise ValueError("Thermal gains must be scalar or match the simulation horizon.") from exc
+    if not all(np.isfinite(arr).all() for arr in (outdoor, hvac, internal, solar)):
+        raise ValueError("Thermal scenario inputs must be finite.")
+    _finite_number(initial_air_temperature, "initial_air_temperature")
+    _finite_number(initial_mass_temperature, "initial_mass_temperature")
     params = parameters or RCParameters()
     air = np.empty(len(outdoor), dtype=float)
     mass = np.empty(len(outdoor), dtype=float)
@@ -89,6 +120,16 @@ def hvac_power_for_setpoint(
     max_abs_power: float = 10.0,
 ) -> float:
     """Return bounded proportional HVAC action for scenario-level control studies."""
+    for name, value in (
+        ("air_temperature", air_temperature),
+        ("setpoint", setpoint),
+        ("proportional_gain", proportional_gain),
+        ("max_abs_power", max_abs_power),
+    ):
+        _finite_number(value, name)
     if proportional_gain <= 0 or max_abs_power <= 0:
         raise ValueError("Controller gain and maximum power must be positive.")
-    return float(np.clip(proportional_gain * (setpoint - air_temperature), -max_abs_power, max_abs_power))
+    action = proportional_gain * (setpoint - air_temperature)
+    if not isfinite(action):
+        raise ValueError("Controller action must be finite.")
+    return float(np.clip(action, -max_abs_power, max_abs_power))
