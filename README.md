@@ -10,6 +10,8 @@
 
 > **Research boundary:** this independent academic prototype keeps raw building data, processed data, trained models, and experiment outputs local. No forecast score, calibrated parameter, or equipment-failure claim is included until executable code generates it from a declared input source.
 
+**v0.1.1 maintenance:** validates finite thermal-model inputs, protects chronological partitions against invalid or missing timestamps, and rejects malformed comfort-cost scenarios. This is an input-integrity patch, not new empirical building-energy evidence. See [CHANGELOG.md](CHANGELOG.md).
+
 ## Research objective
 
 Can a hybrid digital twin combine building energy data, weather, building metadata, a two-state RC thermal model, and transparent scenario analysis to support energy-aware decisions while preserving indoor-comfort constraints?
